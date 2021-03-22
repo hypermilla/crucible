@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls' 
-import { loadSVG }from './js/svgLoader';
-import * as textLoader from './js/textLoader';
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
-// import { extrudedGroupFromSVG } from "./js/extrudedGroupFromSVG";
 
 let camera, scene, renderer, controls; 
 let angle = 0; 
@@ -104,7 +101,6 @@ function init()
 
     // RENDER FINAL SCENE
     renderer.render( scene, camera );
-    console.log("Cena renderizada");
 
     // INTERACTIVE CONTROLS 
     controls = new OrbitControls( camera, renderer.domElement );
@@ -154,7 +150,6 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY)
     // load a SVG resource
     loader.load(resourcePath, function ( data ) {
         const paths = data.paths;
-        // const group = new THREE.Group();
 
         for ( let i = 0; i < paths.length; i ++ ) {
             const path = paths[ i ];
@@ -184,12 +179,7 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY)
         }
 
         group.scale.y *= -1;
-        const bbox = new THREE.Box3().setFromObject(group); 
-        const bbox_width = bbox.max.x - bbox.min.x;
-        const bbox_height = bbox.max.y - bbox.min.y;
-        // group.position.set( - 0.5 * bbox_width, -0.5 * bbox_height, 0 );
         group.position.set(0,offsetY,0);
         group.rotateX(Math.PI / 2);
-        console.log("Group position is", group.position);
     });
 }
