@@ -1,3 +1,6 @@
+# Design files
+design
+
 # Logs
 logs
 *.log
@@ -80,6 +83,7 @@ typings/
 
 # Nuxt.js build / generate output
 .nuxt
+dist
 
 # Gatsby files
 .cache/

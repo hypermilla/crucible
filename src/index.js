@@ -1,19 +1,34 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls' 
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
+import PRNG from "./js/PRNG"; 
 
-let camera, scene, renderer, controls; 
+let composer, camera, scene, renderer, controls, clock; 
 let angle = 0; 
 let speed = 0.003; 
 let range = 100; 
 
+let crucibleData, prng, balance;
+let mainHues, hueBase, hueJitter, saturation, lightness, color; 
+
+const bloomParams = {
+    exposure: 0.6,
+    bloomStrength: 1,
+    bloomThreshold: 0,
+    bloomRadius: 0
+};
+
 //circle parts
-const outerCircleSVG = 'svg/outerCircle.svg';
-const innerLinesSVG = 'svg/innerLines.svg';
-const innerCircleSVG = 'svg/innerCircle.svg';
-const sideCirclesSVG = 'svg/sideCircles.svg';
-const triangleCirclesSVG = 'svg/triangleCircles.svg';
-const smallerOuterCircleSVG = 'svg/smallerOuterCircle.svg';
+const outerCircleSVG = 'data/outerCircle.svg';
+const innerLinesSVG = 'data/innerLines.svg';
+const innerCircleSVG = 'data/innerCircle.svg';
+const sideCirclesSVG = 'data/sideCircles.svg';
+const triangleCirclesSVG = 'data/triangleCircles.svg';
+const smallerOuterCircleSVG = 'data/smallerOuterCircle.svg';
 
 const outerCircle = new THREE.Group();
 const innerLines = new THREE.Group();
@@ -21,6 +36,15 @@ const innerCircle = new THREE.Group();
 const sideCircles = new THREE.Group();
 const triangleCircles = new THREE.Group();
 const smallerOuterCircle = new THREE.Group();
+
+let glowMaterial = new THREE.SpriteMaterial();
+
+const outerCircleGlow = new THREE.Group();
+const innerLinesGlow = new THREE.Group();
+const innerCircleGlow = new THREE.Group();
+const sideCirclesGlow = new THREE.Group();
+const triangleCirclesGlow = new THREE.Group();
+const smallerOuterCircleGlow = new THREE.Group();
 
 const innerCircleY = 0;
 const innerLinesY = -100
@@ -33,35 +57,97 @@ const outerCircleModifier = 0.2;
 const innerCircleModifier = 0.5;
 const innerLinesModifier = 0.2; 
 const sideCirclesModifier = 0.3;
-const triangleCirclesModifier = 0.2; 
-const smOuterCircleModifier = 0.2; 
+const triangleCirclesModifier = 0.4; 
+const smOuterCircleModifier = 0.45; 
 
-init(); 
-animate(); 
+// Owner address
+const account = "0x22FbD6248cB2837900c3fe69f725bc02Dd3A3B33"; 
+
+// Testing Getting Crucible Data 
+const getCrucibleData = async () => {
+    try { 
+        crucibleData =  await getCrucibleDataForAccount(account);
+        crucibleData = crucibleData[0];
+        console.log(crucibleData);
+        generateCrucible(crucibleData); 
+    }
+    catch(err) {
+        console.log("Not able to get Crucible data");
+        throw err;
+    }
+}
+getCrucibleData(); 
+
+function generateCrucible(crucibleData) 
+{
+    balance = logBaseN(2, ((crucibleData.lockedBalance.div(1e9).toNumber()) / 1e9) + 1);
+    console.log("Balance scaled:", balance);
+    const numColors = 3 * Math.floor(balance);
+    console.log("Number of colors", numColors);
+
+    prng = new PRNG(crucibleData.id);
+    mainHues = [];
+	let hueCount = 3 + prng.randomInt('colors', numColors);
+	while (hueCount) {
+		hueCount--;
+		mainHues.push(160 + prng.randomInt('colors', 120));
+	}
+
+    init();
+    animate(); 
+}
+
+function generateColor() {
+    hueJitter = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
+    console.log("hue jitter", hueJitter);
+    hueBase = mainHues[prng.randomInt('colors', mainHues.length)];
+    console.log("hue base", hueBase);
+    saturation = Math.floor(0 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    lightness = Math.floor(30 + (2 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
+    console.log("HSL COLOR", color);
+    const threeColor = new THREE.Color(color);
+    //threeColor.setHSL(hueBase + hueJitter, saturation, lightness);
+    console.log("Generated color", threeColor); 
+    return threeColor;
+}
+
 
 function init() 
-{
+{ 
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.autoClear = false;
+    renderer.setClearColor(0x000000, 0.0);
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+    document.body.appendChild( renderer.domElement );
+    
     scene = new THREE.Scene();
+    clock = new THREE.Clock();
+    
+    // CAMERA
+    camera = new THREE.PerspectiveCamera(
+        100,                                   // Field of view
+        window.innerWidth/window.innerHeight, // Aspect ratio
+        0.05,                                  // Near clipping pane
+        4000                                  // Far clipping pane
+    );
+    camera.position.set(20,600,-400);
+    camera.lookAt(new THREE.Vector3(0,0,0));
 
-    // CIRCLE 
-    extrudedGroupFromSVG(outerCircleSVG, outerCircle, outerCircleY); 
-    outerCircle.castShadow = true;
-    scene.add(outerCircle);
-    extrudedGroupFromSVG(innerLinesSVG, innerLines, innerLinesY);
-    innerLines.castShadow = true;
-    scene.add(innerLines);
-    extrudedGroupFromSVG(innerCircleSVG, innerCircle, innerCircleY);
-    innerCircle.castShadow = true;
-    scene.add(innerCircle);
-    extrudedGroupFromSVG(sideCirclesSVG, sideCircles, sideCirclesY);
-    sideCircles.castShadow = true;
-    scene.add(sideCircles);
-    extrudedGroupFromSVG(triangleCirclesSVG, triangleCircles, triangleCirclesY);
-    triangleCircles.castShadow = true;
-    scene.add(triangleCircles);
-    extrudedGroupFromSVG(smallerOuterCircleSVG, smallerOuterCircle, smOuterCircleY); 
-    smallerOuterCircle.castShadow = true;
-    scene.add(smallerOuterCircle);
+    // INTERACTIVE CONTROLS 
+    controls = new OrbitControls( camera, renderer.domElement );
+    controls.listenToKeyEvents( window ); // optional
+
+    controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+    controls.dampingFactor = 0.05;
+
+    controls.screenSpacePanning = false;
+
+    controls.minDistance = 500;
+    controls.maxDistance = 1000;
+    controls.maxPolarAngle = Math.PI / 2;
 
     // Ambient Light
     const light = new THREE.AmbientLight( 0x32254C, 2 ); 
@@ -83,38 +169,42 @@ function init()
     spotlightBot.target = targetObj;
     scene.add( spotlightBot );
 
-    // CAMERA
-    camera = new THREE.PerspectiveCamera(
-        100,                                   // Field of view
-        window.innerWidth/window.innerHeight, // Aspect ratio
-        0.05,                                  // Near clipping pane
-        4000                                  // Far clipping pane
-    );
-    camera.position.set(20,600,-400);
-    camera.lookAt(new THREE.Vector3(0,0,0));
-
-    // RENDERER 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor( 0x000000, 0 );
-    document.body.appendChild( renderer.domElement );
-
     // RENDER FINAL SCENE
-    renderer.render( scene, camera );
+    //renderer.render( scene, camera );
+    const renderScene = new RenderPass( scene, camera );
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+    bloomPass.threshold = bloomParams.bloomThreshold;
+    bloomPass.strength = bloomParams.bloomStrength;
+    bloomPass.radius = bloomParams.bloomRadius;
 
-    // INTERACTIVE CONTROLS 
-    controls = new OrbitControls( camera, renderer.domElement );
-    controls.listenToKeyEvents( window ); // optional
-
-    controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
-    controls.dampingFactor = 0.05;
-
-    controls.screenSpacePanning = false;
-
-    controls.minDistance = 500;
-    controls.maxDistance = 1000;
-    controls.maxPolarAngle = Math.PI / 2;
+    bloomPass.clear = false; 
     
+    // // bloomPass.material.transparent = true;
+    // renderScene.material.transparent = true; 
+    var width = window.innerWidth || 1;
+    var height = window.innerHeight || 1;
+    var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
+    var renderTarget = new THREE.WebGLRenderTarget( width, height, parameters );
+
+    composer = new EffectComposer( renderer, renderTarget );
+    composer.addPass( renderScene );
+    composer.addPass( bloomPass );
+
+    drawAlchemyCircles(); 
+    window.addEventListener("resize", onWindowResize);
+}
+
+
+function onWindowResize() {
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize( width, height );
+    composer.setSize( width, height );
 }
 
 function animate() {
@@ -139,23 +229,48 @@ function render() {
     sideCircles.position.setY(sideCirclesY + Math.sin(angle) * range * sideCirclesModifier);
     smallerOuterCircle.position.setY(smOuterCircleY + Math.sin(angle) * range * smOuterCircleModifier);
 
-    renderer.render( scene, camera );
+    composer.render();
+
 }
 
-function extrudedGroupFromSVG(resourcePath, group, offsetY) 
+function drawAlchemyCircles() {
+    // REFACTOR LATER TO MAKE IT PROCEDURAL DEPENDING ON CRUCIBLE DATA
+    extrudedGroupFromSVG(outerCircleSVG, outerCircle, outerCircleY, generateColor(), outerCircleGlow); 
+    outerCircle.castShadow = true;
+    scene.add(outerCircle, outerCircleGlow);
+    extrudedGroupFromSVG(innerLinesSVG, innerLines, innerLinesY, generateColor(), innerLinesGlow);
+    innerLines.castShadow = true;
+    scene.add(innerLines, innerLinesGlow);
+    extrudedGroupFromSVG(innerCircleSVG, innerCircle, innerCircleY, generateColor(), innerCircleGlow);
+    innerCircle.castShadow = true;
+    scene.add(innerCircle, innerCircleGlow);
+    extrudedGroupFromSVG(sideCirclesSVG, sideCircles, sideCirclesY, generateColor(), sideCirclesGlow);
+    sideCircles.castShadow = true;
+    scene.add(sideCircles, sideCirclesGlow);
+    extrudedGroupFromSVG(triangleCirclesSVG, triangleCircles, triangleCirclesY, generateColor(), triangleCirclesGlow);
+    triangleCircles.castShadow = true;
+    scene.add(triangleCircles, triangleCirclesGlow);
+    extrudedGroupFromSVG(smallerOuterCircleSVG, smallerOuterCircle, smOuterCircleY, generateColor(), smallerOuterCircleGlow); 
+    smallerOuterCircle.castShadow = true;
+    scene.add(smallerOuterCircle, smallerOuterCircleGlow);
+}
+
+function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGroup) 
 {
     // instantiate a loader
-    const loader = new SVGLoader();
+    const svgLoader = new SVGLoader();
 
     // load a SVG resource
-    loader.load(resourcePath, function ( data ) {
+    svgLoader.load(resourcePath, function ( data ) {
         const paths = data.paths;
 
         for ( let i = 0; i < paths.length; i ++ ) {
             const path = paths[ i ];
 
             const material = new THREE.MeshPhongMaterial( {
-                color: 0x27A0E2
+                color: threeColor,
+                emissive: threeColor,
+                emissiveIntensity: 0.02
             } );
 
             const shapes = path.toShapes( true );
@@ -164,17 +279,17 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY)
 
                 const shape = shapes[ j ];
                 const geometry = new THREE.ExtrudeGeometry(shape, {
-                    steps: 3,
-                    depth: 5,
+                    steps: 4,
+                    depth: 2,
                     bevelEnabled: true,
-                    bevelThickness: 1,
-                    bevelSize: 1, 
-                    bevelOffset: 0,
-                    bevelSegments: 3
+                    bevelThickness: 3,
+                    bevelSize: 3, 
+                    bevelOffset: -2,
+                    bevelSegments: 4
                 });
 
-                const mesh = new THREE.Mesh( geometry, material );
-                group.add( mesh );
+                const mesh = new THREE.Mesh(geometry, material);
+                group.add(mesh);
             }
         }
 
@@ -183,3 +298,7 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY)
         group.rotateX(Math.PI / 2);
     });
 }
+
+function logBaseN(base, num) {
+	return Math.log(num) / Math.log(base);
+};
