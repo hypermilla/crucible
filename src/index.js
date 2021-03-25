@@ -3,9 +3,17 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { UnrealBloomPass } from './js/UnrealBloomPass.js';
 import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
 import PRNG from "./js/PRNG"; 
+
+
+// Get crucible data from ethereum
+// Generate variables based on data
+// Change CSS background color 
+// Draw crucible meshes 
+// Animation loop 
+
 
 let composer, camera, scene, renderer, controls, clock; 
 let angle = 0; 
@@ -17,9 +25,9 @@ let mainHues, hueBase, hueJitter, saturation, lightness, color;
 
 const bloomParams = {
     exposure: 0.6,
-    bloomStrength: 1,
+    bloomStrength: 1.2,
     bloomThreshold: 0,
-    bloomRadius: 0
+    bloomRadius: 1
 };
 
 //circle parts
@@ -38,13 +46,6 @@ const triangleCircles = new THREE.Group();
 const smallerOuterCircle = new THREE.Group();
 
 let glowMaterial = new THREE.SpriteMaterial();
-
-const outerCircleGlow = new THREE.Group();
-const innerLinesGlow = new THREE.Group();
-const innerCircleGlow = new THREE.Group();
-const sideCirclesGlow = new THREE.Group();
-const triangleCirclesGlow = new THREE.Group();
-const smallerOuterCircleGlow = new THREE.Group();
 
 const innerCircleY = 0;
 const innerLinesY = -100
@@ -76,6 +77,7 @@ const getCrucibleData = async () => {
         throw err;
     }
 }
+
 getCrucibleData(); 
 
 function generateCrucible(crucibleData) 
@@ -93,29 +95,43 @@ function generateCrucible(crucibleData)
 		mainHues.push(160 + prng.randomInt('colors', 120));
 	}
 
+    document.body.style.background = "radial-gradient(circle, " + generateHSLColor() + "0%, " + generateHSLColor() + " 100%)"; 
+
     init();
     animate(); 
 }
 
+function generateRGBAColor() {
+    const r = prng.randomInt('colors', 255);
+    const g = prng.randomInt('colors', 255);
+    const b = prng.randomInt('colors', 255);
+    const rgbColor = "rgba(" + r + "," + g + "," + b + ", 1)";
+    console.log("gradient color", rgbColor);
+    return rgbColor;
+}
+
+function generateHSLColor() { 
+    const h = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
+    const s = Math.floor(60 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    const l = Math.floor(30 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    const hslColor = "hsl(" + h + "%, " + s + "&, " + l + "%)";
+    console.log("gradient color", hslColor);
+}
+
 function generateColor() {
     hueJitter = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
-    console.log("hue jitter", hueJitter);
     hueBase = mainHues[prng.randomInt('colors', mainHues.length)];
-    console.log("hue base", hueBase);
-    saturation = Math.floor(0 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    lightness = Math.floor(30 + (2 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    saturation = Math.floor(60 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    lightness = Math.floor(30 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
-    console.log("HSL COLOR", color);
-    const threeColor = new THREE.Color(color);
-    //threeColor.setHSL(hueBase + hueJitter, saturation, lightness);
-    console.log("Generated color", threeColor); 
-    return threeColor;
+    console.log("three color", color);
+    return new THREE.Color(color);
 }
 
 
 function init() 
 { 
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.autoClear = false;
@@ -124,7 +140,6 @@ function init()
     document.body.appendChild( renderer.domElement );
     
     scene = new THREE.Scene();
-    clock = new THREE.Clock();
     
     // CAMERA
     camera = new THREE.PerspectiveCamera(
@@ -158,29 +173,32 @@ function init()
     scene.add(targetObj);
 
     // spotlight from the top 
-    const spotLightTop = new THREE.SpotLight( 0x4ECECE, 1.2);
+    const spotLightTop = new THREE.SpotLight( 0x4ECECE, 0.5);
     spotLightTop.position.set( 0, 1000, 0 );
     spotLightTop.target = targetObj;
-    scene.add( spotLightTop );
+   // scene.add( spotLightTop );
 
     // spotlight bot 
-    const spotlightBot = new THREE.SpotLight( 0xB078FF, 1);
+    const spotlightBot = new THREE.SpotLight( 0xB078FF, 0.3);
     spotlightBot.position.set( 0, -1000, 0 );
     spotlightBot.target = targetObj;
-    scene.add( spotlightBot );
+   // scene.add( spotlightBot );
 
-    // RENDER FINAL SCENE
-    //renderer.render( scene, camera );
+    // RENDER 
     const renderScene = new RenderPass( scene, camera );
     const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
     bloomPass.threshold = bloomParams.bloomThreshold;
     bloomPass.strength = bloomParams.bloomStrength;
     bloomPass.radius = bloomParams.bloomRadius;
 
-    bloomPass.clear = false; 
-    
-    // // bloomPass.material.transparent = true;
-    // renderScene.material.transparent = true; 
+    // bloomPass.clear = false; 
+    // bloomPass.renderToScreen = false; 
+    // bloomPass.oldClearAlpha = 0;
+    // renderScene.clearColor = new THREE.Color(0,0,0);
+    // renderScene.clearAlpha = 0;
+    // renderScene.renderToScreen = false;
+    // renderScene.clear = false; 
+
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
     var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
@@ -235,24 +253,24 @@ function render() {
 
 function drawAlchemyCircles() {
     // REFACTOR LATER TO MAKE IT PROCEDURAL DEPENDING ON CRUCIBLE DATA
-    extrudedGroupFromSVG(outerCircleSVG, outerCircle, outerCircleY, generateColor(), outerCircleGlow); 
+    extrudedGroupFromSVG(outerCircleSVG, outerCircle, outerCircleY, generateColor()); 
     outerCircle.castShadow = true;
-    scene.add(outerCircle, outerCircleGlow);
-    extrudedGroupFromSVG(innerLinesSVG, innerLines, innerLinesY, generateColor(), innerLinesGlow);
+    scene.add(outerCircle);
+    extrudedGroupFromSVG(innerLinesSVG, innerLines, innerLinesY, generateColor());
     innerLines.castShadow = true;
-    scene.add(innerLines, innerLinesGlow);
-    extrudedGroupFromSVG(innerCircleSVG, innerCircle, innerCircleY, generateColor(), innerCircleGlow);
+    scene.add(innerLines);
+    extrudedGroupFromSVG(innerCircleSVG, innerCircle, innerCircleY, generateColor());
     innerCircle.castShadow = true;
-    scene.add(innerCircle, innerCircleGlow);
-    extrudedGroupFromSVG(sideCirclesSVG, sideCircles, sideCirclesY, generateColor(), sideCirclesGlow);
+    scene.add(innerCircle);
+    extrudedGroupFromSVG(sideCirclesSVG, sideCircles, sideCirclesY, generateColor());
     sideCircles.castShadow = true;
-    scene.add(sideCircles, sideCirclesGlow);
-    extrudedGroupFromSVG(triangleCirclesSVG, triangleCircles, triangleCirclesY, generateColor(), triangleCirclesGlow);
+    scene.add(sideCircles);
+    extrudedGroupFromSVG(triangleCirclesSVG, triangleCircles, triangleCirclesY, generateColor());
     triangleCircles.castShadow = true;
-    scene.add(triangleCircles, triangleCirclesGlow);
-    extrudedGroupFromSVG(smallerOuterCircleSVG, smallerOuterCircle, smOuterCircleY, generateColor(), smallerOuterCircleGlow); 
+    scene.add(triangleCircles);
+    extrudedGroupFromSVG(smallerOuterCircleSVG, smallerOuterCircle, smOuterCircleY, generateColor()); 
     smallerOuterCircle.castShadow = true;
-    scene.add(smallerOuterCircle, smallerOuterCircleGlow);
+    scene.add(smallerOuterCircle);
 }
 
 function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGroup) 
@@ -270,7 +288,7 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGrou
             const material = new THREE.MeshPhongMaterial( {
                 color: threeColor,
                 emissive: threeColor,
-                emissiveIntensity: 0.02
+                emissiveIntensity: 1
             } );
 
             const shapes = path.toShapes( true );
@@ -301,4 +319,4 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGrou
 
 function logBaseN(base, num) {
 	return Math.log(num) / Math.log(base);
-};
+}

@@ -2,15 +2,4 @@
 				margin: 0;
 				background: rgb(119,82,156);
 				background: radial-gradient(circle, rgba(119,82,156,1) 0%, rgba(18,30,77,1) 100%); 
-			}</style><script defer="defer" src="bundle.ffd30279289973bbd40b.js"></script></head><body><script type="x-shader/x-vertex" id="vertexshader">varying vec2 vUv;
-			void main() {
-				vUv = uv;
-				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-			}</script><script type="x-shader/x-fragment" id="fragmentshader">uniform sampler2D baseTexture;
-			uniform sampler2D bloomTexture;
-
-			varying vec2 vUv;
-			void main() {
-				gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
-
-			}</script><script src="684b5a8c9c7d64c36c7e.js"></script></body></html>
+			}</style><script defer="defer" src="bundle.1711b5b6115ccd027eff.js"></script></head><body><script src="d214a5a89473b53af51f.js"></script></body></html>
