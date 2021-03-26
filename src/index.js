@@ -44,7 +44,7 @@ async function getCrucibleData (account) {
         crucibleData =  await getCrucibleDataForAccount(account);
         console.log(crucibleData[0]);
         generateCrucible(crucibleData[0]); 
-        document.querySelector("p").textContent = "Generate Crucible from Owner Address " + account;
+        document.querySelector("p").textContent = "Generated Crucible from Owner Address " + account;
     }
     catch(err) {
         console.log(err);
@@ -108,7 +108,7 @@ function init()
         0.05,                                  // Near clipping pane
         4000                                  // Far clipping pane
     );
-    camera.position.set(20,600,-400);
+    camera.position.set(50,1000,-1400);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
     // INTERACTIVE CONTROLS 
