@@ -44,7 +44,7 @@ async function getCrucibleData (account) {
         crucibleData =  await getCrucibleDataForAccount(account);
         console.log(crucibleData[0]);
         generateCrucible(crucibleData[0]); 
-        document.querySelector("p").textContent = "Crucible data found!";
+        document.querySelector("p").textContent = "Generate Crucible from Owner Address " + account;
     }
     catch(err) {
         console.log(err);
