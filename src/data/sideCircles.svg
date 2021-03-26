@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 25.2.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!-- Generator: Adobe Illustrator 25.2.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 564.6 566.9" style="enable-background:new 0 0 564.6 566.9;" xml:space="preserve">
 <style type="text/css">
 	.st0{fill:#00AEEF;}
 </style>
-<ellipse transform="matrix(0.9732 -0.2298 0.2298 0.9732 -4.7105 -40.4564)" class="st0" cx="-176.1" cy="0" rx="35.7" ry="35.7"/>
-<circle class="st0" cx="176.1" cy="0" r="35.7"/>
+<ellipse class="st0" cx="-166.3" cy="0" rx="33.7" ry="33.5"/>
+<ellipse class="st0" cx="166.3" cy="0" rx="33.7" ry="33.5"/>
 <g>
-	<path class="st0" d="M0,181c-99.8,0-181-81.2-181-181S-99.8-181,0-181S181-99.8,181,0S99.8,181,0,181z M0-176.1
-		c-97.1,0-176.1,79-176.1,176.1c0,97.1,79,176.1,176.1,176.1S176.1,97.1,176.1,0C176.1-97.1,97.1-176.1,0-176.1z"/>
+	<path class="st0" d="M0,170c-94.2,0-171-76.3-171-170S-94.2-170,0-170S171-93.7,171,0S94.2,170,0,170z M0-165.4
+		c-91.7,0-166.3,74.2-166.3,165.4S-91.7,165.4,0,165.4S166.3,91.2,166.3,0S91.7-165.4,0-165.4z"/>
 </g>
 </svg>

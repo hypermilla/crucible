@@ -28,9 +28,14 @@ const bloomParams = {
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 let account = urlParams.get("ownerAddress"); 
-console.log(queryString, account);
+
+console.log("Owner Address", account);
+
 if (account != null) { 
     getCrucibleData(account); 
+} else {
+    account = "0xea32A39B8f1424330c77BDcF377e51ce4635C5E1";
+    getCrucibleData(account);
 }
 
 // Get crucible data from ethereum
@@ -58,15 +63,22 @@ function getOwnerAddress() {
 function generateCrucible(crucibleData) 
 {
     balance = logBaseN(2, ((crucibleData.lockedBalance.div(1e9).toNumber()) / 1e9) + 1);
-    const numColors = 3 * Math.floor(balance);
     prng = new PRNG(crucibleData.id);
     
+    const numColors = 2 * Math.floor(balance);
+    lightness = Math.floor(20 + (4 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     mainHues = [];
 
-	let hueCount = 3 + prng.randomInt('colors', numColors);
+	let hueCount = 3 + numColors + prng.randomInt('colors', numColors);
 	while (hueCount) {
 		hueCount--;
-		mainHues.push(160 + prng.randomInt('colors', 120));
+        mainHues.push(160 + prng.randomInt('colors', 30));
+        if (hueCount > 4) {
+            mainHues.push(10 + prng.randomInt('colors', 60));
+            mainHues.push(40 + prng.randomInt('colors', 20));
+        } else if (hueCount < 3) {
+            mainHues.push(270 + prng.randomInt('colors', 20));
+        }
 	}
 
     // Change CSS background color 
@@ -109,7 +121,7 @@ function init()
     controls.screenSpacePanning = false;
 
     controls.minDistance = 500;
-    controls.maxDistance = 1000;
+    controls.maxDistance = 2000;
     controls.maxPolarAngle = Math.PI / 2;
 
     // LIGHTS
@@ -141,47 +153,92 @@ function init()
     composer.addPass( renderScene );
     composer.addPass( bloomPass );
 
-    // DRAW ALCHEMY CIRCLES
-    const numCircles = 5 + Math.floor(balance) > 10 ? 10 : 5 + Math.floor(balance);
-    console.log("Balance math floor", Math.floor(balance));
-    console.log("Balance", balance);
-    console.log("Number of circles total", numCircles);
-    for (let i = 0; i < numCircles; i++) {
-
-        // randomize if they get in the scene or not 
-        let addedCircleToScene = false;
-        while (!addedCircleToScene) {
-            const circlePrng = prng.randomInt('circles', numCircles);
-            console.log("prng", circlePrng, "i", i);
-
-            let circleIndex = circlePrng;
-            console.log("circle index:", circleIndex);
-            console.log(circles[circleIndex].addedToScene);
-
-            if (!circles[circleIndex].addedToScene) {
-                
-                circles[circleIndex].addedToScene = true; 
-
-                circles[circleIndex].yOffset = (50 * i) + prng.randomInt('offset', 50);
-                circles[circleIndex].rotationSpeed = 0.001 + prng.randomInt('offset',4) * 0.001;
-                circles[circleIndex].movementSpeed = 0.1 + prng.randomInt('offset',5) * 0.2;
-
-                extrudedGroupFromSVG(circles[circleIndex].path, circles[circleIndex].meshGroup, circles[circleIndex].yOffset, generateThreeColor());
-                circles[circleIndex].meshGroup.rotation.z = prng.randomInt('rotation',10) * 0.001;
-                scene.add(circles[circleIndex].meshGroup);
-
-                console.log("Circles", circleIndex, "Added to scene");
-                addedCircleToScene = true; 
-
-            }
-        }
-    }
+    // DRAW THE CRUCIBLE OBJECTS
+    drawAlchemyCircle(); 
 
     // WINDOW EVENT
     window.addEventListener("resize", onWindowResize);
 
     // ANIMATE
     animate(); 
+}
+
+function drawAlchemyCircle() {
+
+       // DRAW ALCHEMY CIRCLES
+       const totalCircleCount = 4 + Math.floor(balance) > 9 ? 9 : 4 + Math.floor(balance);
+       console.log("Balance scaled", balance, "Floored balance", Math.floor(balance), "Total circle count", totalCircleCount);
+
+       // DRAW CENTER PIECE, min 1, max 2
+       let centerCircleCount = 0;
+   
+       for (let i = 1; i <= totalCircleCount; i += 6) {
+           centerCircleCount++; 
+       }
+   
+       drawAlchemyCircleGroup(centerCircleCount, circles.center, 1, 1); 
+   
+       // DRAW BOTTOM PIECES, min 1, max 4
+       let bottomCircleCount = 0;
+   
+       for (let i = 1; i <= totalCircleCount; i += 3) {
+           bottomCircleCount++;
+       }
+   
+       drawAlchemyCircleGroup(bottomCircleCount, circles.bottom, -50 * centerCircleCount, -1); 
+   
+   
+       // DRAW OVERLAY TOP PIECES, min 2, max 4
+       let topCircleCount = 0; 
+   
+       for (let i = 0; i <= totalCircleCount; i += 3) {
+           topCircleCount++;
+       }
+       
+       drawAlchemyCircleGroup(topCircleCount, circles.top, 50 * centerCircleCount, 1); 
+       
+       console.log("center", centerCircleCount, "bottom", bottomCircleCount, "top", topCircleCount)
+}
+
+function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directionY) {
+
+    console.log("Started drawing circle group", circlesList, "Circle count is", number);
+
+    for (let i=0; i < number; i++) {
+
+        let addedCircleToScene = false;
+
+        while (!addedCircleToScene) {
+
+            const circlePrng = prng.randomInt('circles', circlesList.length - 1);
+            console.log(circlePrng, "index");
+
+            if (!circlesList[circlePrng].addedToScene) {
+                
+                circlesList[circlePrng].addedToScene = true; 
+
+                circlesList[circlePrng].yOffset = startingYPosition + (i * 60 * directionY) + (prng.randomInt('offset',20) * directionY);
+                circlesList[circlePrng].rotationSpeed *= 0.001 + prng.randomInt('offset',6);
+                circlesList[circlePrng].movementSpeed *= 0.1 + prng.randomInt('offset',10);
+                
+                extrudedGroupFromSVG(
+                    circlesList[circlePrng].path, 
+                    circlesList[circlePrng].meshGroup, 
+                    circlesList[circlePrng].yOffset, 
+                    generateThreeColor()
+                );
+                    
+                circlesList[circlePrng].meshGroup.rotation.z = prng.randomInt('rotation', 10) * 0.001;
+                circlesList[circlePrng].meshGroup.scale.x = 1 + (i * 0.4);
+                circlesList[circlePrng].meshGroup.scale.y = 1 + (i * 0.4);
+                scene.add(circlesList[circlePrng].meshGroup);
+                
+                addedCircleToScene = true; 
+                console.log(circlePrng, circlesList[circlePrng].path, "placed in", circlesList[circlePrng].yOffset, circlesList);
+            }
+        }
+
+    }
 }
 
 
@@ -205,17 +262,29 @@ function animate() {
     
     // Animate Alchemy Circles
     angle += speed; 
-    for (let i = 0; i < circles.length; i++) {
-        if (circles[i].addedToScene) {
-            circles[i].meshGroup.rotation.z += circles[i].rotationSpeed;
-            circles[i].meshGroup.position.setY(
-                circles[i].yOffset + Math.sin(angle) * range * circles[i].movementSpeed); 
-        }
-    }
+    
+    animateAlchemyCircleGroup(circles.center);
+    animateAlchemyCircleGroup(circles.bottom);
+    animateAlchemyCircleGroup(circles.top);
+        
 
     // Render scene 
     composer.render();
 }
+
+
+
+function animateAlchemyCircleGroup (list) {
+
+    for (let i = 0; i < list.length; i++) {
+        if (list[i].addedToScene) {
+            list[i].meshGroup.rotation.z += list[i].rotationSpeed;
+            list[i].meshGroup.position.setY(
+                list[i].yOffset + Math.sin(angle) * range * list[i].movementSpeed); 
+        }
+    }
+}
+
 
 
 function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor) 
@@ -262,25 +331,32 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor)
     });
 }
 
+
 function logBaseN(base, num) {
 	return Math.log(num) / Math.log(base);
 }
 
+
 function generateHSLColor() { 
     const h = Math.floor(160 + prng.randomInt('colors', 160));
     const s = Math.floor(40 + (3 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    const l = Math.floor(10 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    const l = Math.floor(0 + (1.5 * balance) + Math.min(prng.randomInt('colors', 10), 30));
     const hslColor = "hsl(" + h + ", " + s + "%, " + l + "%)";
 
     return hslColor;
 }
 
+
 function generateThreeColor() {
-    hueJitter = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
+    hueJitter = Math.floor((30 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
     hueBase = mainHues[prng.randomInt('colors', mainHues.length)];
-    saturation = Math.floor(40 + (6 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    lightness = Math.floor(10 + (6 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    saturation = Math.floor(40 + (3 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    // lightness = Math.floor(10 + (6 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
+
+    console.log(mainHues);
+    console.log(" huejitter" , hueJitter);
+    console.log(" final hue" , hueBase + hueJitter);
 
     return new THREE.Color(color);
 }
