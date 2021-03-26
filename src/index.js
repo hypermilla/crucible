@@ -6,13 +6,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './js/UnrealBloomPass.js';
 import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
 import PRNG from "./js/PRNG"; 
-
-
-// Get crucible data from ethereum
-// Generate variables based on data
-// Change CSS background color 
-// Draw crucible meshes 
-// Animation loop 
+import { circles } from "./js/circles";
 
 
 let composer, camera, scene, renderer, controls, clock; 
@@ -30,103 +24,57 @@ const bloomParams = {
     bloomRadius: 1
 };
 
-//circle parts
-const outerCircleSVG = 'data/outerCircle.svg';
-const innerLinesSVG = 'data/innerLines.svg';
-const innerCircleSVG = 'data/innerCircle.svg';
-const sideCirclesSVG = 'data/sideCircles.svg';
-const triangleCirclesSVG = 'data/triangleCircles.svg';
-const smallerOuterCircleSVG = 'data/smallerOuterCircle.svg';
+//document.querySelector("button").addEventListener("click", getOwnerAddress);
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+let account = urlParams.get("ownerAddress"); 
+console.log(queryString, account);
+if (account != null) { 
+    getCrucibleData(account); 
+}
 
-const outerCircle = new THREE.Group();
-const innerLines = new THREE.Group();
-const innerCircle = new THREE.Group();
-const sideCircles = new THREE.Group();
-const triangleCircles = new THREE.Group();
-const smallerOuterCircle = new THREE.Group();
-
-let glowMaterial = new THREE.SpriteMaterial();
-
-const innerCircleY = 0;
-const innerLinesY = -100
-const outerCircleY = -50
-const sideCirclesY = 50;
-const triangleCirclesY = 100; 
-const smOuterCircleY = -150;
-
-const outerCircleModifier = 0.2; 
-const innerCircleModifier = 0.5;
-const innerLinesModifier = 0.2; 
-const sideCirclesModifier = 0.3;
-const triangleCirclesModifier = 0.4; 
-const smOuterCircleModifier = 0.45; 
-
-// Owner address
-const account = "0x22FbD6248cB2837900c3fe69f725bc02Dd3A3B33"; 
-
-// Testing Getting Crucible Data 
-const getCrucibleData = async () => {
+// Get crucible data from ethereum
+async function getCrucibleData (account) {
     try { 
         crucibleData =  await getCrucibleDataForAccount(account);
-        crucibleData = crucibleData[0];
-        console.log(crucibleData);
-        generateCrucible(crucibleData); 
+        console.log(crucibleData[0]);
+        generateCrucible(crucibleData[0]); 
+        document.querySelector("p").textContent = "Crucible data found!";
     }
     catch(err) {
-        console.log("Not able to get Crucible data");
-        throw err;
+        console.log(err);
+        document.querySelector("p").textContent = "Not able to get Crucible data";
     }
 }
 
-getCrucibleData(); 
+// Getting owner from form 
+function getOwnerAddress() {
+    account = document.querySelector("input").value;
+    console.log("Owner address", account);
+    getCrucibleData(account); 
+}
 
+// Generate variables based on data
 function generateCrucible(crucibleData) 
 {
     balance = logBaseN(2, ((crucibleData.lockedBalance.div(1e9).toNumber()) / 1e9) + 1);
-    console.log("Balance scaled:", balance);
     const numColors = 3 * Math.floor(balance);
-    console.log("Number of colors", numColors);
-
     prng = new PRNG(crucibleData.id);
+    
     mainHues = [];
+
 	let hueCount = 3 + prng.randomInt('colors', numColors);
 	while (hueCount) {
 		hueCount--;
 		mainHues.push(160 + prng.randomInt('colors', 120));
 	}
 
-    document.body.style.background = "radial-gradient(circle, " + generateHSLColor() + "0%, " + generateHSLColor() + " 100%)"; 
+    // Change CSS background color 
+    document.body.style.background = "radial-gradient(circle, " + generateHSLColor() + ", " + "hsl(266, 49%, 19%)" + ")"; 
 
     init();
-    animate(); 
 }
 
-function generateRGBAColor() {
-    const r = prng.randomInt('colors', 255);
-    const g = prng.randomInt('colors', 255);
-    const b = prng.randomInt('colors', 255);
-    const rgbColor = "rgba(" + r + "," + g + "," + b + ", 1)";
-    console.log("gradient color", rgbColor);
-    return rgbColor;
-}
-
-function generateHSLColor() { 
-    const h = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
-    const s = Math.floor(60 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    const l = Math.floor(30 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
-    const hslColor = "hsl(" + h + "%, " + s + "&, " + l + "%)";
-    console.log("gradient color", hslColor);
-}
-
-function generateColor() {
-    hueJitter = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
-    hueBase = mainHues[prng.randomInt('colors', mainHues.length)];
-    saturation = Math.floor(60 + (5 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    lightness = Math.floor(30 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
-    color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
-    console.log("three color", color);
-    return new THREE.Color(color);
-}
 
 
 function init() 
@@ -164,7 +112,7 @@ function init()
     controls.maxDistance = 1000;
     controls.maxPolarAngle = Math.PI / 2;
 
-    // Ambient Light
+    // LIGHTS
     const light = new THREE.AmbientLight( 0x32254C, 2 ); 
     scene.add( light );
 
@@ -172,17 +120,15 @@ function init()
     targetObj.position.set(0,0,0);
     scene.add(targetObj);
 
-    // spotlight from the top 
     const spotLightTop = new THREE.SpotLight( 0x4ECECE, 0.5);
     spotLightTop.position.set( 0, 1000, 0 );
     spotLightTop.target = targetObj;
-   // scene.add( spotLightTop );
+    // scene.add( spotLightTop );
 
-    // spotlight bot 
     const spotlightBot = new THREE.SpotLight( 0xB078FF, 0.3);
     spotlightBot.position.set( 0, -1000, 0 );
     spotlightBot.target = targetObj;
-   // scene.add( spotlightBot );
+    // scene.add( spotlightBot );
 
     // RENDER 
     const renderScene = new RenderPass( scene, camera );
@@ -191,25 +137,51 @@ function init()
     bloomPass.strength = bloomParams.bloomStrength;
     bloomPass.radius = bloomParams.bloomRadius;
 
-    // bloomPass.clear = false; 
-    // bloomPass.renderToScreen = false; 
-    // bloomPass.oldClearAlpha = 0;
-    // renderScene.clearColor = new THREE.Color(0,0,0);
-    // renderScene.clearAlpha = 0;
-    // renderScene.renderToScreen = false;
-    // renderScene.clear = false; 
-
-    var width = window.innerWidth || 1;
-    var height = window.innerHeight || 1;
-    var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
-    var renderTarget = new THREE.WebGLRenderTarget( width, height, parameters );
-
-    composer = new EffectComposer( renderer, renderTarget );
+    composer = new EffectComposer( renderer );
     composer.addPass( renderScene );
     composer.addPass( bloomPass );
 
-    drawAlchemyCircles(); 
+    // DRAW ALCHEMY CIRCLES
+    const numCircles = 5 + Math.floor(balance) > 10 ? 10 : 5 + Math.floor(balance);
+    console.log("Balance math floor", Math.floor(balance));
+    console.log("Balance", balance);
+    console.log("Number of circles total", numCircles);
+    for (let i = 0; i < numCircles; i++) {
+
+        // randomize if they get in the scene or not 
+        let addedCircleToScene = false;
+        while (!addedCircleToScene) {
+            const circlePrng = prng.randomInt('circles', numCircles);
+            console.log("prng", circlePrng, "i", i);
+
+            let circleIndex = circlePrng;
+            console.log("circle index:", circleIndex);
+            console.log(circles[circleIndex].addedToScene);
+
+            if (!circles[circleIndex].addedToScene) {
+                
+                circles[circleIndex].addedToScene = true; 
+
+                circles[circleIndex].yOffset = (50 * i) + prng.randomInt('offset', 50);
+                circles[circleIndex].rotationSpeed = 0.001 + prng.randomInt('offset',4) * 0.001;
+                circles[circleIndex].movementSpeed = 0.1 + prng.randomInt('offset',5) * 0.2;
+
+                extrudedGroupFromSVG(circles[circleIndex].path, circles[circleIndex].meshGroup, circles[circleIndex].yOffset, generateThreeColor());
+                circles[circleIndex].meshGroup.rotation.z = prng.randomInt('rotation',10) * 0.001;
+                scene.add(circles[circleIndex].meshGroup);
+
+                console.log("Circles", circleIndex, "Added to scene");
+                addedCircleToScene = true; 
+
+            }
+        }
+    }
+
+    // WINDOW EVENT
     window.addEventListener("resize", onWindowResize);
+
+    // ANIMATE
+    animate(); 
 }
 
 
@@ -226,54 +198,27 @@ function onWindowResize() {
 }
 
 function animate() {
+
+    // Update Frame 
     requestAnimationFrame(animate);
     controls.update(); 
-    render(); 
-}
-
-function render() {
     
-    innerLines.rotation.z -= 0.003;
-    triangleCircles.rotation.z += 0.004;
-    outerCircle.rotation.z += 0.004;
-    sideCircles.rotation.z += 0.002;
-    smallerOuterCircle.rotation.z += 0.003;
-    
+    // Animate Alchemy Circles
     angle += speed; 
-    outerCircle.position.setY(outerCircleY + Math.sin(angle) * range * outerCircleModifier);
-    innerCircle.position.setY(innerCircleY + Math.sin(angle) * range * innerCircleModifier);
-    innerLines.position.setY(innerLinesY + Math.sin(angle) * range * innerLinesModifier);
-    triangleCircles.position.setY(triangleCirclesY + Math.sin(angle) * range * triangleCirclesModifier);
-    sideCircles.position.setY(sideCirclesY + Math.sin(angle) * range * sideCirclesModifier);
-    smallerOuterCircle.position.setY(smOuterCircleY + Math.sin(angle) * range * smOuterCircleModifier);
+    for (let i = 0; i < circles.length; i++) {
+        if (circles[i].addedToScene) {
+            circles[i].meshGroup.rotation.z += circles[i].rotationSpeed;
+            circles[i].meshGroup.position.setY(
+                circles[i].yOffset + Math.sin(angle) * range * circles[i].movementSpeed); 
+        }
+    }
 
+    // Render scene 
     composer.render();
-
 }
 
-function drawAlchemyCircles() {
-    // REFACTOR LATER TO MAKE IT PROCEDURAL DEPENDING ON CRUCIBLE DATA
-    extrudedGroupFromSVG(outerCircleSVG, outerCircle, outerCircleY, generateColor()); 
-    outerCircle.castShadow = true;
-    scene.add(outerCircle);
-    extrudedGroupFromSVG(innerLinesSVG, innerLines, innerLinesY, generateColor());
-    innerLines.castShadow = true;
-    scene.add(innerLines);
-    extrudedGroupFromSVG(innerCircleSVG, innerCircle, innerCircleY, generateColor());
-    innerCircle.castShadow = true;
-    scene.add(innerCircle);
-    extrudedGroupFromSVG(sideCirclesSVG, sideCircles, sideCirclesY, generateColor());
-    sideCircles.castShadow = true;
-    scene.add(sideCircles);
-    extrudedGroupFromSVG(triangleCirclesSVG, triangleCircles, triangleCirclesY, generateColor());
-    triangleCircles.castShadow = true;
-    scene.add(triangleCircles);
-    extrudedGroupFromSVG(smallerOuterCircleSVG, smallerOuterCircle, smOuterCircleY, generateColor()); 
-    smallerOuterCircle.castShadow = true;
-    scene.add(smallerOuterCircle);
-}
 
-function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGroup) 
+function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor) 
 {
     // instantiate a loader
     const svgLoader = new SVGLoader();
@@ -319,4 +264,23 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor, glowGrou
 
 function logBaseN(base, num) {
 	return Math.log(num) / Math.log(base);
+}
+
+function generateHSLColor() { 
+    const h = Math.floor(160 + prng.randomInt('colors', 160));
+    const s = Math.floor(40 + (3 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    const l = Math.floor(10 + (5 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    const hslColor = "hsl(" + h + ", " + s + "%, " + l + "%)";
+
+    return hslColor;
+}
+
+function generateThreeColor() {
+    hueJitter = Math.floor((60 / (1 + balance)) * (0.5 - prng.randomFloat('colors')));
+    hueBase = mainHues[prng.randomInt('colors', mainHues.length)];
+    saturation = Math.floor(40 + (6 * balance) + Math.min(prng.randomInt('colors', 100), 100));
+    lightness = Math.floor(10 + (6 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
+
+    return new THREE.Color(color);
 }
