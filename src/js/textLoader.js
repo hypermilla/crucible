@@ -39,6 +39,7 @@ function draw3DCircleText (string, group, radius, center, threeColor) {
       );
       
       mesh.lookAt(center);
+      mesh.rotateY(Math.PI);
       
       group.add(mesh);
     }

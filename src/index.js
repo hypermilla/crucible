@@ -124,7 +124,7 @@ function init()
     controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
     controls.dampingFactor = 0.05;
 
-    controls.screenSpacePanning = false;
+    controls.screenSpacePanning = true;
 
     controls.minDistance = 500;
     controls.maxDistance = 2000;
@@ -285,7 +285,7 @@ function animate() {
 
 
 function animateTextGroup (group, direction) {
-    group.rotation.y += 0.001 * prng.randomInt('offset', 5) * direction; 
+    group.rotation.y += 0.003; 
 }
 
 
