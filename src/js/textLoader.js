@@ -48,7 +48,7 @@ function draw3DCircleText (string, group, radius, center, threeColor) {
 function draw3DText(string, scene) {
     let loader = new THREE.FontLoader();
     
-    loader.load('fonts/syne_mono_regular.json', function (font) {
+    loader.load('data/fonts/syne_mono_regular.json', function (font) {
 
       let geometry = new THREE.TextGeometry(string, {
         font: font,
