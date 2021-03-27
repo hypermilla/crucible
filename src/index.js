@@ -7,15 +7,22 @@ import { UnrealBloomPass } from './js/UnrealBloomPass.js';
 import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
 import PRNG from "./js/PRNG"; 
 import { circles } from "./js/circles";
+import { draw3DCircleText } from "./js/textLoader";
+import Proton from 'three.proton.js';
+import dot from "./js/dot";
 
 
-let composer, camera, scene, renderer, controls, clock; 
+let composer, camera, scene, renderer, controls;
+let proton, emitter;
+
 let angle = 0; 
 let speed = 0.003; 
 let range = 100; 
 
 let crucibleData, prng, balance;
 let mainHues, hueBase, hueJitter, saturation, lightness, color; 
+let ownerAddressMeshGroup = new THREE.Group();
+let crucibleIdMeshGroup = new THREE.Group(); 
 
 const bloomParams = {
     exposure: 0.6,
@@ -42,8 +49,8 @@ if (account != null) {
 async function getCrucibleData (account) {
     try { 
         crucibleData =  await getCrucibleDataForAccount(account);
-        console.log(crucibleData[0]);
-        generateCrucible(crucibleData[0]); 
+        crucibleData = crucibleData[0];
+        generateCrucible(crucibleData); 
         document.querySelector("p").textContent = "Generated Crucible from Owner Address " + account;
     }
     catch(err) {
@@ -156,6 +163,9 @@ function init()
     // DRAW THE CRUCIBLE OBJECTS
     drawAlchemyCircle(); 
 
+    // INIT PARTICLES
+    initProton();
+
     // WINDOW EVENT
     window.addEventListener("resize", onWindowResize);
 
@@ -167,7 +177,6 @@ function drawAlchemyCircle() {
 
        // DRAW ALCHEMY CIRCLES
        const totalCircleCount = 4 + Math.floor(balance) > 9 ? 9 : 4 + Math.floor(balance);
-       console.log("Balance scaled", balance, "Floored balance", Math.floor(balance), "Total circle count", totalCircleCount);
 
        // DRAW CENTER PIECE, min 1, max 2
        let centerCircleCount = 0;
@@ -177,15 +186,22 @@ function drawAlchemyCircle() {
        }
    
        drawAlchemyCircleGroup(centerCircleCount, circles.center, 1, 1); 
+       draw3DCircleText(account, ownerAddressMeshGroup, 360, new THREE.Vector3(0,0,0), generateThreeColor()); 
+       scene.add(ownerAddressMeshGroup);
    
        // DRAW BOTTOM PIECES, min 1, max 4
        let bottomCircleCount = 0;
    
-       for (let i = 1; i <= totalCircleCount; i += 3) {
+       for (let i = 1; i < totalCircleCount; i += 3) {
            bottomCircleCount++;
        }
    
        drawAlchemyCircleGroup(bottomCircleCount, circles.bottom, -50 * centerCircleCount, -1); 
+       console.log(bottomCircleCount);
+
+       const crucibleIdRadius = 500 * (1 + (0.4 * (bottomCircleCount - 1))); 
+       draw3DCircleText(crucibleData.id, crucibleIdMeshGroup, crucibleIdRadius, new THREE.Vector3(0, -50 * bottomCircleCount,0), generateThreeColor());
+       scene.add(crucibleIdMeshGroup);
    
    
        // DRAW OVERLAY TOP PIECES, min 2, max 4
@@ -196,13 +212,9 @@ function drawAlchemyCircle() {
        }
        
        drawAlchemyCircleGroup(topCircleCount, circles.top, 50 * centerCircleCount, 1); 
-       
-       console.log("center", centerCircleCount, "bottom", bottomCircleCount, "top", topCircleCount)
 }
 
 function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directionY) {
-
-    console.log("Started drawing circle group", circlesList, "Circle count is", number);
 
     for (let i=0; i < number; i++) {
 
@@ -211,14 +223,13 @@ function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directio
         while (!addedCircleToScene) {
 
             const circlePrng = prng.randomInt('circles', circlesList.length - 1);
-            console.log(circlePrng, "index");
 
             if (!circlesList[circlePrng].addedToScene) {
                 
                 circlesList[circlePrng].addedToScene = true; 
 
-                circlesList[circlePrng].yOffset = startingYPosition + (i * 60 * directionY) + (prng.randomInt('offset',20) * directionY);
-                circlesList[circlePrng].rotationSpeed *= 0.001 + prng.randomInt('offset',6);
+                circlesList[circlePrng].yOffset = startingYPosition + (i * 60 * directionY) + (prng.randomInt('offset',30) * directionY);
+                circlesList[circlePrng].rotationSpeed *= 1 + prng.randomInt('offset',6);
                 circlesList[circlePrng].movementSpeed *= 0.1 + prng.randomInt('offset',10);
                 
                 extrudedGroupFromSVG(
@@ -228,13 +239,12 @@ function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directio
                     generateThreeColor()
                 );
                     
-                circlesList[circlePrng].meshGroup.rotation.z = prng.randomInt('rotation', 10) * 0.001;
+                circlesList[circlePrng].meshGroup.rotation.z *= prng.randomInt('rotation', 10);
                 circlesList[circlePrng].meshGroup.scale.x = 1 + (i * 0.4);
                 circlesList[circlePrng].meshGroup.scale.y = 1 + (i * 0.4);
                 scene.add(circlesList[circlePrng].meshGroup);
                 
                 addedCircleToScene = true; 
-                console.log(circlePrng, circlesList[circlePrng].path, "placed in", circlesList[circlePrng].yOffset, circlesList);
             }
         }
 
@@ -266,12 +276,19 @@ function animate() {
     animateAlchemyCircleGroup(circles.center);
     animateAlchemyCircleGroup(circles.bottom);
     animateAlchemyCircleGroup(circles.top);
-        
+
+    animateTextGroup(ownerAddressMeshGroup, 1);
+    animateTextGroup(crucibleIdMeshGroup, -1);
 
     // Render scene 
+    proton.update();
     composer.render();
 }
 
+
+function animateTextGroup (group, direction) {
+    group.rotation.y += 0.001 * prng.randomInt('offset', 5) * direction; 
+}
 
 
 function animateAlchemyCircleGroup (list) {
@@ -284,7 +301,6 @@ function animateAlchemyCircleGroup (list) {
         }
     }
 }
-
 
 
 function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor) 
@@ -328,6 +344,7 @@ function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor)
         group.scale.y *= -1;
         group.position.set(0,offsetY,0);
         group.rotateX(Math.PI / 2);
+        group.rotation.y = 0;
     });
 }
 
@@ -354,9 +371,62 @@ function generateThreeColor() {
     // lightness = Math.floor(10 + (6 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     color = `hsl(${hueBase + hueJitter}, ${saturation}%, ${lightness}%)`;
 
-    console.log(mainHues);
-    console.log(" huejitter" , hueJitter);
-    console.log(" final hue" , hueBase + hueJitter);
-
     return new THREE.Color(color);
 }
+
+
+function initProton() {
+
+    proton = new Proton();
+    proton.addEmitter(createEmitter(300, 10, 2)); // bg
+    proton.addEmitter(createEmitter(50, 5, 5)); // middle
+    proton.addRender(new Proton.SpriteRender(scene));
+
+  }
+  
+
+  function createSprite() {
+    let map = new THREE.TextureLoader().load(dot);
+    let material = new THREE.SpriteMaterial({
+      map: map,
+      color: generateThreeColor(),
+      blending: THREE.AdditiveBlending,
+      fog: true
+    });
+    return new THREE.Sprite(material);
+  }
+  
+  function createEmitter(boxSize, particleSize, rate) {
+    emitter = new Proton.Emitter();
+    emitter.rate = new Proton.Rate(
+      new Proton.Span(rate * prng.randomInt(('particles'), 5), rate * balance * prng.randomInt(('particles'), 5)),
+      new Proton.Span(0.1, 0.25)
+    );
+    emitter.addInitialize(new Proton.Mass(1));
+    emitter.addInitialize(new Proton.Radius(particleSize + (balance * prng.randomInt('particles'), 50)));
+    emitter.addInitialize(new Proton.Life(2, 4));
+    emitter.addInitialize(new Proton.Body(createSprite()));
+    emitter.addInitialize(new Proton.Position(
+        new Proton.BoxZone(boxSize * ((0.5 + balance) * prng.randomInt(('particles'), 50)))
+    ));
+    emitter.addInitialize(
+      new Proton.Velocity(200, new Proton.Vector3D(0, 1, 1), 180)
+    );
+  
+    // //emitter.addBehaviour(new Proton.RandomDrift(30, 30, 30, .05));
+    emitter.addBehaviour(new Proton.Rotate("random", "random"));
+    emitter.addBehaviour(new Proton.Scale(1, 0.5));
+    emitter.addBehaviour(new Proton.Alpha(1, 0, Infinity, Proton.easeInQuart));
+  
+    //let zone2 = new Proton.BoxZone(400);
+    //emitter.addBehaviour(new Proton.CrossZone(zone2, "bound"));
+    //emitter.addBehaviour(new Proton.Collision(emitter,true));
+    emitter.addBehaviour(
+      new Proton.Color(generateThreeColor(), "random", Infinity, Proton.easeOutQuart)
+    );
+  
+    emitter.p.x = 0;
+    emitter.p.y = 0;
+    emitter.emit();
+    return emitter;
+  }
