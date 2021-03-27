@@ -4,7 +4,7 @@ import { BendModifier } from './modifiers/BendModifier';
 function draw3DCircleText (string, group, radius, center, threeColor) {
   let loader = new THREE.FontLoader();
   
-  loader.load('fonts/syne_mono_regular.json', function (font) {
+  loader.load('data/syne_mono_regular.json', function (font) {
 
     const characterCount = string.length; 
     const angleInterval = 2 * Math.PI / characterCount;  
@@ -48,7 +48,7 @@ function draw3DCircleText (string, group, radius, center, threeColor) {
 function draw3DText(string, scene) {
     let loader = new THREE.FontLoader();
     
-    loader.load('data/fonts/syne_mono_regular.json', function (font) {
+    loader.load('data/syne_mono_regular.json', function (font) {
 
       let geometry = new THREE.TextGeometry(string, {
         font: font,
@@ -77,7 +77,7 @@ function draw3DBendedText(string, scene) {
 
     // scene objects
     var loader = new THREE.FontLoader();
-    loader.load( 'fonts/syne_mono_regular.json', function ( response ) {
+    loader.load( 'data/syne_mono_regular.json', function ( response ) {
 
         const text_geometry = new THREE.TextGeometry( string, 
                 {

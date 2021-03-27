@@ -5,12 +5,15 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './js/UnrealBloomPass.js';
 import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
+import getCrucibleData from "./crucibleData/getCrucibleData";
+import getAllCrucibleIds from "./crucibleData/getAllCrucibleIds";
 import PRNG from "./js/PRNG"; 
 import { circles } from "./js/circles";
 import { draw3DCircleText } from "./js/textLoader";
 import Proton from 'three.proton.js';
 import dot from "./js/dot";
 
+let allCrucibleIds;
 
 let composer, camera, scene, renderer, controls;
 let proton, emitter;
@@ -31,7 +34,10 @@ const bloomParams = {
     bloomRadius: 1
 };
 
-//document.querySelector("button").addEventListener("click", getOwnerAddress);
+// Load all Crucible Ids when page loads
+loadAllCrucibleIds(); 
+
+
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 let account = urlParams.get("ownerAddress"); 
@@ -39,14 +45,14 @@ let account = urlParams.get("ownerAddress");
 console.log("Owner Address", account);
 
 if (account != null) { 
-    getCrucibleData(account); 
+    getCrucibleDataForOwnerAddress(account); 
 } else {
-    account = "0x458219485Fd43D9e62ddE453f854cede0afB5913";
-    getCrucibleData(account);
+    account = "0x8B68A44A09AA6E2cce3f2a896b8a57eE1938D77d";
+    getCrucibleDataForOwnerAddress(account);
 }
 
 // Get crucible data from ethereum
-async function getCrucibleData (account) {
+async function getCrucibleDataForOwnerAddress (account) {
     try { 
         crucibleData =  await getCrucibleDataForAccount(account);
         crucibleData = crucibleData[0];
@@ -57,13 +63,6 @@ async function getCrucibleData (account) {
         console.log(err);
         document.querySelector("p").textContent = "Not able to get Crucible data";
     }
-}
-
-// Getting owner from form 
-function getOwnerAddress() {
-    account = document.querySelector("input").value;
-    console.log("Owner address", account);
-    getCrucibleData(account); 
 }
 
 // Generate variables based on data
@@ -197,7 +196,6 @@ function drawAlchemyCircle() {
        }
    
        drawAlchemyCircleGroup(bottomCircleCount, circles.bottom, -50 * centerCircleCount, -1); 
-       console.log(bottomCircleCount);
 
        const crucibleIdRadius = 500 * (1 + (0.4 * (bottomCircleCount - 1))); 
        draw3DCircleText(crucibleData.id, crucibleIdMeshGroup, crucibleIdRadius, new THREE.Vector3(0, -50 * bottomCircleCount,0), generateThreeColor());
@@ -430,3 +428,31 @@ function initProton() {
     emitter.emit();
     return emitter;
   }
+
+
+async function generateRandomCrucible() {
+
+    // Crucible data store for random btn 
+    const randomIndex = Math.floor(Math.random() * allCrucibleIds.length); 
+    const selectedCrucibleId = allCrucibleIds[randomIndex];
+
+    const url = window.location.href.split('?')[0];
+    const newCrucibleData = await getCrucibleData(selectedCrucibleId);
+    console.log(newCrucibleData.owner);
+    window.location.href = url + "?ownerAddress=" + newCrucibleData.owner;
+    
+  }
+
+
+async function loadAllCrucibleIds() {
+    try {
+
+        allCrucibleIds = await getAllCrucibleIds(); 
+        document.getElementById("randomize").addEventListener("click", generateRandomCrucible);
+    }
+    catch (error) {
+        console.log(error); 
+        document.getElementById("randomize").background = "#333"; 
+    }
+
+}

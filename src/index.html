@@ -5,14 +5,14 @@
 		<title>CRUCIBLE</title>
 		<link rel="icon" type="image/png" sizes="16x16" href="data/favicon.ico">
 		<link rel="preconnect" href="https://fonts.gstatic.com">
-		<link href="https://fonts.googleapis.com/css2?family=Martel&display=swap" rel="stylesheet"> 
+		<link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"> 
 		<style>
 			body { 
 				margin: 0;
 				background: rgb(119,82,156);
 				background: radial-gradient(circle, rgba(119,82,156,1) 0%, rgba(18,30,77,1) 100%); 
 				color: #f2f2f2;
-				font-family: 'Martel', serif;
+				font-family:'Roboto',sans-serif;
 				font-size: 1em;
 			}
 			#header {
@@ -20,13 +20,41 @@
 				text-align: center;
 				margin-top: 1em;
 			}
+
 			input, button {
-				padding: 1em;
-				border: 0px solid;
-				-webkit-border-radius: 5px;
-				-moz-border-radius: 5px;
-				border-radius: 5px;
+				padding:0.5em 1em;
+				border:0.1em solid #FFFFFF;
+				margin:0 0.3em 0.3em 0;
+				border-radius:0.12em;
+				box-sizing: border-box;
 			}
+
+			a.button1 {
+				display:inline-block;
+				padding:0.35em 1.2em;
+				border:0.1em solid #FFFFFF;
+				margin:0 0.3em 0.3em 0;
+				border-radius:0.12em;
+				box-sizing: border-box;
+				text-decoration:none;
+				font-family:'Roboto',sans-serif;
+				font-weight:300;
+				color:#FFFFFF;
+				text-align:center;
+				transition: all 0.2s;
+			}
+
+			a.button1:hover {
+				color:#000;
+				background-color: #fff;
+			}
+
+			@media all and (max-width:30em) {
+				 a.button1 {
+					display: block;
+					margin: 0.4em auto;
+				 }
+			} 
 		</style>
 	</head>
 	<body>
@@ -34,9 +62,10 @@
 		<div id="header">
 			<form>
 				<input size=50 type="text" name="ownerAddress" id="ownerAddress" value="Insert the Owner Address" onfocus="this.value=''" />
-				<input type="submit" value="Generate Crucible" />
+				<a class="button1" href="javascript:{}" onclick="document.querySelector('form').submit();">Generate Crucible</a>
 				<p name="message" id="msg"></p>
 			</form>
+			<a class="button1" href="javascript:{}" id="randomize">See a Random Crucible</a>
 		</div>
 	</body>
 </html>
