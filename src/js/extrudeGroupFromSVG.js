@@ -17,7 +17,7 @@ function extrudeGroupFromSVG(resourcePath, group, offsetY, threeColor)
             const material = new THREE.MeshPhongMaterial( {
                 color: threeColor,
                 emissive: threeColor,
-                emissiveIntensity: 1
+                emissiveIntensity: 1.5
             } );
 
             const shapes = path.toShapes( true );

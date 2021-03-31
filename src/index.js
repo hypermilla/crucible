@@ -10,12 +10,12 @@ import getCrucibleDataForAccount from "./fiddlekins/alchemist-crucible-lens/src/
 import getCrucibleData from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getCrucibleData";
 import getAllCrucibleIds from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getAllCrucibleIds";
 import PRNG from "./js/PRNG"; 
-import XorShift from "./js/xorshift"; 
 
 import { circles } from "./js/circles";
 import { draw3DCircleText } from "./js/textLoader";
 import { extrudeGroupFromSVG } from "./js/extrudeGroupFromSVG"
 import dot from "./js/dot";
+
 
 
 let allCrucibleIds;
@@ -33,7 +33,7 @@ let ownerAddressMeshGroup = new THREE.Group();
 let crucibleIdMeshGroup = new THREE.Group(); 
 
 const bloomParams = {
-    exposure: 0.8,
+    exposure: 0.6,
     bloomStrength: 1.5,
     bloomThreshold: 0,
     bloomRadius: 1
@@ -76,8 +76,8 @@ function generateCrucible(crucibleData)
     balance = logBaseN(2, ((crucibleData.lockedBalance.div(1e9).toNumber()) / 1e9) + 1);
     prng = new PRNG(crucibleData.id);
     
-    const numColors = 2 * Math.floor(balance);
-    lightness = Math.floor(20 + (4 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    const numColors = 4 * Math.floor(balance);
+    lightness = Math.floor(30 + (4 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     mainHues = [];
 
 	let hueCount = 3 + numColors + prng.randomInt('colors', numColors);
@@ -119,7 +119,7 @@ function init()
         0.05,                                  // Near clipping pane
         4000                                  // Far clipping pane
     );
-    camera.position.set(950,950,-550);
+    camera.position.set(700,1200,-1400);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
     // INTERACTIVE CONTROLS 
@@ -180,6 +180,7 @@ function init()
 function drawAlchemyCircle() {
 
        // DRAW ALCHEMY CIRCLES
+       const startingYPosition = 0; 
        const totalCircleCount = 4 + Math.floor(balance) > 9 ? 9 : 4 + Math.floor(balance);
 
        // DRAW CENTER PIECE, min 1, max 2
@@ -189,8 +190,8 @@ function drawAlchemyCircle() {
            centerCircleCount++; 
        }
    
-       drawAlchemyCircleGroup(centerCircleCount, circles.center, 1, 1); 
-       draw3DCircleText(account, ownerAddressMeshGroup, 360, new THREE.Vector3(0,0,0), generateThreeColor()); 
+       drawAlchemyCircleGroup(centerCircleCount, circles.center, startingYPosition, 1); 
+       draw3DCircleText(account, ownerAddressMeshGroup, 360, new THREE.Vector3(0,startingYPosition,0), generateThreeColor()); 
        scene.add(ownerAddressMeshGroup);
    
        // DRAW BOTTOM PIECES, min 1, max 4
@@ -200,10 +201,10 @@ function drawAlchemyCircle() {
            bottomCircleCount++;
        }
    
-       drawAlchemyCircleGroup(bottomCircleCount, circles.bottom, -50 * centerCircleCount, -1); 
+       drawAlchemyCircleGroup(bottomCircleCount, circles.bottom, startingYPosition - (50 * centerCircleCount), -1); 
 
        const crucibleIdRadius = 500 * (1 + (0.4 * (bottomCircleCount - 1))); 
-       draw3DCircleText(crucibleData.id, crucibleIdMeshGroup, crucibleIdRadius, new THREE.Vector3(0, -50 * bottomCircleCount,0), generateThreeColor());
+       draw3DCircleText(crucibleData.id, crucibleIdMeshGroup, crucibleIdRadius, new THREE.Vector3(0, startingYPosition - (50 * bottomCircleCount),0), generateThreeColor());
        scene.add(crucibleIdMeshGroup);
    
    
@@ -214,7 +215,7 @@ function drawAlchemyCircle() {
            topCircleCount++;
        }
        
-       drawAlchemyCircleGroup(topCircleCount, circles.top, 50 * centerCircleCount, 1); 
+       drawAlchemyCircleGroup(topCircleCount, circles.top, startingYPosition + (50 * centerCircleCount), 1); 
 }
 
 function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directionY) {
@@ -285,8 +286,6 @@ function animate() {
     animateTextGroup(ownerAddressMeshGroup, 1);
     animateTextGroup(crucibleIdMeshGroup, -1);
 
-    console.log("camera", camera.position);
-
     // Render scene 
     proton.update();
     composer.render();
@@ -319,7 +318,7 @@ function logBaseN(base, num) {
 function generateHSLColor() { 
     const h = Math.floor(160 + prng.randomInt('colors', 160));
     const s = Math.floor(40 + (3 * balance) + Math.min(prng.randomInt('colors', 100), 100));
-    const l = Math.floor(0 + (1.5 * balance) + Math.min(prng.randomInt('colors', 10), 30));
+    const l = Math.floor(2 + (1.5 * balance) + Math.min(prng.randomInt('colors', 10), 30));
     const hslColor = "hsl(" + h + ", " + s + "%, " + l + "%)";
 
     return hslColor;
@@ -340,14 +339,14 @@ function generateThreeColor() {
 function initProton() {
 
     proton = new Proton();
-    proton.addEmitter(createEmitter(300, 10, 2)); // bg
-    proton.addEmitter(createEmitter(50, 5, 5)); // middle
+    proton.addEmitter(createEmitter(300, 10, 6)); // bg
+    proton.addEmitter(createEmitter(40, 3, 5)); // middle
     proton.addRender(new Proton.SpriteRender(scene));
 
-  }
+}
   
 
-  function createSprite() {
+function createSprite() {
 
     let map = new THREE.TextureLoader().load(dot);
 
@@ -361,6 +360,7 @@ function initProton() {
     return new THREE.Sprite(material);
 }
   
+
 
 function createEmitter(boxSize, particleSize, rate) {
 
@@ -409,12 +409,11 @@ async function generateRandomCrucible() {
     console.log(newCrucibleData.owner);
     window.location.href = url + "?ownerAddress=" + newCrucibleData.owner;
     
-  }
+}
 
 
 async function loadAllCrucibleIds() {
     try {
-
         allCrucibleIds = await getAllCrucibleIds(); 
         document.getElementById("randomize").addEventListener("click", generateRandomCrucible);
     }
