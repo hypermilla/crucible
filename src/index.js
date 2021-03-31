@@ -1,14 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls' 
-import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './js/UnrealBloomPass.js';
 import Proton from 'three.proton.js';
 
-import getCrucibleDataForAccount from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getCrucibleDataForAccount";
-import getCrucibleData from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getCrucibleData";
-import getAllCrucibleIds from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getAllCrucibleIds";
+import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
+import getCrucibleData from "./crucibleData/getCrucibleData";
+import getAllCrucibleIds from "./crucibleData/getAllCrucibleIds";
 import PRNG from "./js/PRNG"; 
 
 import { circles } from "./js/circles";
@@ -337,6 +336,7 @@ function generateThreeColor() {
 
 
 function initProton() {
+
     proton = new Proton();
     proton.addEmitter(createEmitter(300, 10, 6)); // bg
     proton.addEmitter(createEmitter(40, 3, 5)); // middle

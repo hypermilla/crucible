@@ -1,0 +1,9 @@
+const contractAddresses = {
+	Crucible: '0xCF576F74BA3B01CDC04E04305055446D1649BD07',
+	CrucibleFactory: '0x54e0395CFB4f39beF66DBCd5bD93Cca4E9273D56',
+	LPToken: '0xCD6bcca48069f8588780dFA274960F15685aEe0e',
+	Aludel: '0xf0D415189949d913264A454F57f4279ad66cB24d',
+	Transmuter: '0xB772ce9f14FC7C7db0D4525aDb9349FBD7ce456a'
+};
+
+export default contractAddresses;
