@@ -337,7 +337,6 @@ function generateThreeColor() {
 
 
 function initProton() {
-
     proton = new Proton();
     proton.addEmitter(createEmitter(300, 10, 6)); // bg
     proton.addEmitter(createEmitter(40, 3, 5)); // middle
