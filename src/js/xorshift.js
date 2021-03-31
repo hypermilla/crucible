@@ -15,7 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  * @param {array} seed "128-bit" integer, composed of 4x32-bit
  * integers in big endian order.
  */
-function XorShift(seed) {
+ function XorShift(seed) {
 	// Note the extension, this === module.exports is required because
 	// the `constructor` function will be used to generate new instances.
 	// In that case `this` will point to the default RNG, and `this` will

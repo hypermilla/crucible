@@ -4,14 +4,19 @@ import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader";
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './js/UnrealBloomPass.js';
-import getCrucibleDataForAccount from "./crucibleData/getCrucibleDataForAccount";
-import getCrucibleData from "./crucibleData/getCrucibleData";
-import getAllCrucibleIds from "./crucibleData/getAllCrucibleIds";
+import Proton from 'three.proton.js';
+
+import getCrucibleDataForAccount from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getCrucibleDataForAccount";
+import getCrucibleData from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getCrucibleData";
+import getAllCrucibleIds from "./fiddlekins/alchemist-crucible-lens/src/crucibleData/getAllCrucibleIds";
 import PRNG from "./js/PRNG"; 
+import XorShift from "./js/xorshift"; 
+
 import { circles } from "./js/circles";
 import { draw3DCircleText } from "./js/textLoader";
-import Proton from 'three.proton.js';
+import { extrudeGroupFromSVG } from "./js/extrudeGroupFromSVG"
 import dot from "./js/dot";
+
 
 let allCrucibleIds;
 
@@ -28,8 +33,8 @@ let ownerAddressMeshGroup = new THREE.Group();
 let crucibleIdMeshGroup = new THREE.Group(); 
 
 const bloomParams = {
-    exposure: 0.6,
-    bloomStrength: 1.2,
+    exposure: 0.8,
+    bloomStrength: 1.5,
     bloomThreshold: 0,
     bloomRadius: 1
 };
@@ -109,12 +114,12 @@ function init()
     
     // CAMERA
     camera = new THREE.PerspectiveCamera(
-        100,                                   // Field of view
+        75,                                   // Field of view
         window.innerWidth/window.innerHeight, // Aspect ratio
         0.05,                                  // Near clipping pane
         4000                                  // Far clipping pane
     );
-    camera.position.set(50,1000,-1400);
+    camera.position.set(950,950,-550);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
     // INTERACTIVE CONTROLS 
@@ -223,14 +228,14 @@ function drawAlchemyCircleGroup(number, circlesList, startingYPosition, directio
             const circlePrng = prng.randomInt('circles', circlesList.length - 1);
 
             if (!circlesList[circlePrng].addedToScene) {
-                
+
                 circlesList[circlePrng].addedToScene = true; 
 
                 circlesList[circlePrng].yOffset = startingYPosition + (i * 60 * directionY) + (prng.randomInt('offset',30) * directionY);
                 circlesList[circlePrng].rotationSpeed *= 1 + prng.randomInt('offset',6);
                 circlesList[circlePrng].movementSpeed *= 0.1 + prng.randomInt('offset',10);
                 
-                extrudedGroupFromSVG(
+                extrudeGroupFromSVG(
                     circlesList[circlePrng].path, 
                     circlesList[circlePrng].meshGroup, 
                     circlesList[circlePrng].yOffset, 
@@ -262,6 +267,7 @@ function onWindowResize() {
     composer.setSize( width, height );
 }
 
+
 function animate() {
 
     // Update Frame 
@@ -275,13 +281,17 @@ function animate() {
     animateAlchemyCircleGroup(circles.bottom);
     animateAlchemyCircleGroup(circles.top);
 
+    // Animate Text around circles
     animateTextGroup(ownerAddressMeshGroup, 1);
     animateTextGroup(crucibleIdMeshGroup, -1);
+
+    console.log("camera", camera.position);
 
     // Render scene 
     proton.update();
     composer.render();
 }
+
 
 
 function animateTextGroup (group, direction) {
@@ -298,52 +308,6 @@ function animateAlchemyCircleGroup (list) {
                 list[i].yOffset + Math.sin(angle) * range * list[i].movementSpeed); 
         }
     }
-}
-
-
-function extrudedGroupFromSVG(resourcePath, group, offsetY, threeColor) 
-{
-    // instantiate a loader
-    const svgLoader = new SVGLoader();
-
-    // load a SVG resource
-    svgLoader.load(resourcePath, function ( data ) {
-        const paths = data.paths;
-
-        for ( let i = 0; i < paths.length; i ++ ) {
-            const path = paths[ i ];
-
-            const material = new THREE.MeshPhongMaterial( {
-                color: threeColor,
-                emissive: threeColor,
-                emissiveIntensity: 1
-            } );
-
-            const shapes = path.toShapes( true );
-
-            for ( let j = 0; j < shapes.length; j ++ ) {
-
-                const shape = shapes[ j ];
-                const geometry = new THREE.ExtrudeGeometry(shape, {
-                    steps: 4,
-                    depth: 2,
-                    bevelEnabled: true,
-                    bevelThickness: 3,
-                    bevelSize: 3, 
-                    bevelOffset: -2,
-                    bevelSegments: 4
-                });
-
-                const mesh = new THREE.Mesh(geometry, material);
-                group.add(mesh);
-            }
-        }
-
-        group.scale.y *= -1;
-        group.position.set(0,offsetY,0);
-        group.rotateX(Math.PI / 2);
-        group.rotation.y = 0;
-    });
 }
 
 
@@ -384,22 +348,29 @@ function initProton() {
   
 
   function createSprite() {
+
     let map = new THREE.TextureLoader().load(dot);
+
     let material = new THREE.SpriteMaterial({
-      map: map,
-      color: generateThreeColor(),
-      blending: THREE.AdditiveBlending,
-      fog: true
+        map: map,
+        color: generateThreeColor(),
+        blending: THREE.AdditiveBlending,
+        fog: true
     });
+
     return new THREE.Sprite(material);
-  }
+}
   
-  function createEmitter(boxSize, particleSize, rate) {
+
+function createEmitter(boxSize, particleSize, rate) {
+
     emitter = new Proton.Emitter();
+
     emitter.rate = new Proton.Rate(
-      new Proton.Span(rate * prng.randomInt(('particles'), 5), rate * balance * prng.randomInt(('particles'), 5)),
-      new Proton.Span(0.1, 0.25)
+        new Proton.Span(rate * prng.randomInt(('particles'), 5), rate * balance * prng.randomInt(('particles'), 5)),
+        new Proton.Span(0.1, 0.25)
     );
+
     emitter.addInitialize(new Proton.Mass(1));
     emitter.addInitialize(new Proton.Radius(particleSize + (balance * prng.randomInt('particles'), 50)));
     emitter.addInitialize(new Proton.Life(2, 4));
@@ -408,26 +379,23 @@ function initProton() {
         new Proton.BoxZone(boxSize * ((0.5 + balance) * prng.randomInt(('particles'), 50)))
     ));
     emitter.addInitialize(
-      new Proton.Velocity(200, new Proton.Vector3D(0, 1, 1), 180)
+        new Proton.Velocity(200, new Proton.Vector3D(0, 1, 1), 180)
     );
-  
+
     // //emitter.addBehaviour(new Proton.RandomDrift(30, 30, 30, .05));
     emitter.addBehaviour(new Proton.Rotate("random", "random"));
     emitter.addBehaviour(new Proton.Scale(1, 0.5));
     emitter.addBehaviour(new Proton.Alpha(1, 0, Infinity, Proton.easeInQuart));
-  
-    //let zone2 = new Proton.BoxZone(400);
-    //emitter.addBehaviour(new Proton.CrossZone(zone2, "bound"));
-    //emitter.addBehaviour(new Proton.Collision(emitter,true));
+
     emitter.addBehaviour(
-      new Proton.Color(generateThreeColor(), "random", Infinity, Proton.easeOutQuart)
+        new Proton.Color(generateThreeColor(), "random", Infinity, Proton.easeOutQuart)
     );
-  
+
     emitter.p.x = 0;
     emitter.p.y = 0;
     emitter.emit();
     return emitter;
-  }
+}
 
 
 async function generateRandomCrucible() {
