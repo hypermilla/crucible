@@ -33,7 +33,7 @@ let crucibleIdMeshGroup = new THREE.Group();
 
 const bloomParams = {
     exposure: 0.6,
-    bloomStrength: 1.5,
+    bloomStrength: 1.2,
     bloomThreshold: 0,
     bloomRadius: 1
 };
@@ -76,15 +76,15 @@ function generateCrucible(crucibleData)
     prng = new PRNG(crucibleData.id);
     
     const numColors = 4 * Math.floor(balance);
-    lightness = Math.floor(30 + (4 * balance) + Math.min(prng.randomInt('colors', 10), 50));
+    lightness = Math.floor(40 + (2 * balance) + Math.min(prng.randomInt('colors', 10), 50));
     mainHues = [];
 
-	let hueCount = 3 + numColors + prng.randomInt('colors', numColors);
+	let hueCount = 4 + numColors + prng.randomInt('colors', numColors);
 	while (hueCount) {
 		hueCount--;
         mainHues.push(160 + prng.randomInt('colors', 30));
-        if (hueCount > 4) {
-            mainHues.push(10 + prng.randomInt('colors', 60));
+        if (hueCount > 5) {
+            mainHues.push(20 + prng.randomInt('colors', 60));
             mainHues.push(40 + prng.randomInt('colors', 20));
         } else if (hueCount < 3) {
             mainHues.push(270 + prng.randomInt('colors', 20));
